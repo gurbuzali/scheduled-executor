@@ -40,7 +40,7 @@ public class ScheduledExecutorService extends DistributedExecutorService {
         return new ScheduledExecutorProxy(name, nodeEngine, this);
     }
 
-    public void schedule(String name, String uuid, Callable callable, ResponseHandler responseHandler, long delay, long period) {
+    public void schedule(String name, String uuid, Callable callable, ResponseHandler responseHandler, long delay, long period, boolean fixedRate) {
 //        startPending(name);
         CallableProcessor processor = new CallableProcessor(name, uuid, callable, responseHandler);
 //        if (uuid != null) {
@@ -48,11 +48,15 @@ public class ScheduledExecutorService extends DistributedExecutorService {
 //        }
 
         try {
-            if (period != -1) {
-                executionService.scheduleAtFixedRate(name, processor, delay, period, TimeUnit.MILLISECONDS);
-            } else {
+            if (period == -1) {
                 executionService.schedule(name, processor, delay, TimeUnit.MILLISECONDS);
+                return;
             }
+            if (fixedRate) {
+                executionService.scheduleAtFixedRate(name, processor, delay, period, TimeUnit.MILLISECONDS);
+                return;
+            }
+            executionService.scheduleWithFixedDelay(name, processor, delay, period, TimeUnit.MILLISECONDS);
         } catch (RejectedExecutionException e) {
 //            rejectExecution(name);
             logger.warning("While executing " + callable + " on Executor[" + name + "]", e);
@@ -84,11 +88,10 @@ public class ScheduledExecutorService extends DistributedExecutorService {
 
         @Override
         public void run() {
-            long start = Clock.currentTimeMillis();
 //            startExecution(name, start - creationTime);
             Object result = null;
             try {
-                super.run();
+                super.runAndReset();
                 if (!isCancelled()) {
                     result = get();
                 }

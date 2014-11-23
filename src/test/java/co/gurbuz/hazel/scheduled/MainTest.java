@@ -1,21 +1,15 @@
 package co.gurbuz.hazel.scheduled;
 
-import com.hazelcast.client.HazelcastClient;
-import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.client.config.ProxyFactoryConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.SerializationConfig;
 import com.hazelcast.config.ServiceConfig;
 import com.hazelcast.config.ServicesConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IExecutorService;
-import com.hazelcast.core.IQueue;
 import com.hazelcast.instance.GroupProperties;
 
 import java.io.Serializable;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +30,7 @@ public class MainTest {
         int g3 = rand.nextInt(255);
         System.setProperty("hazelcast.multicast.group", "224." + g1 + "." + g2 + "." + g3);
     }
+
     public static void main(String[] args) throws Exception {
         final ServiceConfig serviceConfig = new ServiceConfig();
         serviceConfig.setEnabled(true);
@@ -49,10 +44,9 @@ public class MainTest {
 //        memberSerializationConfig.addPortableFactory(PriorityPortableHook.F_ID, hook.createFactory());
         final HazelcastInstance instance = Hazelcast.newHazelcastInstance(config);
         IScheduledExecutorService scheduled = instance.getDistributedObject(ScheduledExecutorService.SERVICE_NAME, "foo");
-        ScheduledFuture future = scheduled.schedule(new MyCallable(), 10, TimeUnit.SECONDS);
+        ScheduledFuture future = scheduled.scheduleAtFixedRate(new MyCallable(), 5, 5, TimeUnit.SECONDS);
 
-        Thread.sleep(18000);
-        System.err.println("scheduled " + future.get() );
+        Thread.sleep(23000);
 
 //        ClientConfig clientConfig = new ClientConfig();
 //        ProxyFactoryConfig proxyFactoryConfig = new ProxyFactoryConfig();
@@ -71,15 +65,14 @@ public class MainTest {
 //        System.err.println("veli: " + veli);
     }
 
-    static class MyCallable implements Callable, Serializable {
+    static class MyCallable implements Runnable, Serializable {
 
         public MyCallable() {
         }
 
         @Override
-        public Object call() throws Exception {
+        public void run() {
             System.err.println("fatal oldu!!!");
-            return "oldu";
         }
     }
 }

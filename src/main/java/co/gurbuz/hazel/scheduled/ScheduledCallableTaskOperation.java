@@ -26,17 +26,19 @@ public class ScheduledCallableTaskOperation extends Operation implements Traceab
     protected transient Callable callable;
     private Data callableData;
     private long delay;
-    private long period;
+    private long period = -1;
+    private boolean fixedRate;
 
     public ScheduledCallableTaskOperation() {
     }
 
-    public ScheduledCallableTaskOperation(String name, String uuid, Data callableData, long delay, long period) {
+    public ScheduledCallableTaskOperation(String name, String uuid, Data callableData, long delay, long period, boolean fixedRate) {
         this.name = name;
         this.uuid = uuid;
         this.callableData = callableData;
         this.delay = delay;
         this.period = period;
+        this.fixedRate = fixedRate;
     }
 
     @Override
@@ -77,7 +79,7 @@ public class ScheduledCallableTaskOperation extends Operation implements Traceab
     @Override
     public final void run() throws Exception {
         ScheduledExecutorService service = getService();
-        service.schedule(name, uuid, callable, getResponseHandler(), delay, period);
+        service.schedule(name, uuid, callable, getResponseHandler(), delay, period, fixedRate);
     }
 
     @Override
@@ -106,6 +108,7 @@ public class ScheduledCallableTaskOperation extends Operation implements Traceab
         out.writeData(callableData);
         out.writeLong(delay);
         out.writeLong(period);
+        out.writeBoolean(fixedRate);
     }
 
     @Override
@@ -115,6 +118,7 @@ public class ScheduledCallableTaskOperation extends Operation implements Traceab
         callableData = in.readData();
         delay = in.readLong();
         period = in.readLong();
+        fixedRate = in.readBoolean();
     }
 
 

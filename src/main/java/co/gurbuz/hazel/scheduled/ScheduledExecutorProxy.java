@@ -42,12 +42,14 @@ public class ScheduledExecutorProxy extends ExecutorServiceProxy implements ISch
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
         final int partitionId = getTaskPartitionId(callable);
-        return submitToPartitionOwner(callable, partitionId, unit.toMillis(delay), -1);
+        return submitToPartitionOwner(callable, partitionId, unit.toMillis(delay), -1, false);
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return null;
+        RunnableAdapter<Object> callable = createRunnableAdapter(command);
+        final int partitionId = getTaskPartitionId(callable);
+        return submitToPartitionOwner(callable, partitionId, unit.toMillis(initialDelay), unit.toMillis(period), true);
     }
 
     @Override
@@ -62,7 +64,7 @@ public class ScheduledExecutorProxy extends ExecutorServiceProxy implements ISch
         return new RunnableAdapter<T>(command);
     }
 
-    private <T> ScheduledFuture<T> submitToPartitionOwner(Callable<T> task, int partitionId, long delay, long period) {
+    private <T> ScheduledFuture<T> submitToPartitionOwner(Callable<T> task, int partitionId, long delay, long period, boolean fixedRate) {
         if (task == null) {
             throw new NullPointerException("task can't be null");
         }
@@ -73,7 +75,7 @@ public class ScheduledExecutorProxy extends ExecutorServiceProxy implements ISch
         Data taskData = nodeEngine.toData(task);
         String uuid = buildRandomUuidString();
         String name = getName();
-        ScheduledCallableTaskOperation op = new ScheduledCallableTaskOperation(name, uuid, taskData, delay, period);
+        ScheduledCallableTaskOperation op = new ScheduledCallableTaskOperation(name, uuid, taskData, delay, period, fixedRate);
         ICompletableFuture future = invoke(partitionId, op);
         return new ScheduledDelegatingFuture<T>(future, nodeEngine.getSerializationService(), delay);
 //        return new CancellableDelegatingFuture<T>(future, nodeEngine, uuid, partitionId);
